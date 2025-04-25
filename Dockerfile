@@ -1,5 +1,5 @@
-# 1. Use an ARM-compatible Python base image
-FROM arm32v7/python:3.9-slim-buster
+# 1. Base image: multi-arch Python 3.9 on Debian Bullseye
+FROM python:3.9-slim-bullseye
 
 # 2. Install OS packages needed for Pi camera and media
 RUN apt-get update && \
