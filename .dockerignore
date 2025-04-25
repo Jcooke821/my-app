@@ -1,0 +1,31 @@
+# Byte-compiled Python files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Git repo data
+.git/
+.gitignore      # (optional; the container doesn’t need it)
+
+# Editor configs
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# Node modules (if you happen to have a frontend build step)
+node_modules/

@@ -1,0 +1,11 @@
+{
+    "Name": "LEDRoutine",
+    "Description": "Test routine for LEDs",
+    "Tasks": [
+        {
+            "Name": "LEDTest",
+            "Path": "TestScripts/LEDTest.py",
+            "StopOnFailure": "True"
+        }
+    ]
+}

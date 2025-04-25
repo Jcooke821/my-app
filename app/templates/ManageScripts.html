@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Scripts</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        header {
+            background-color: #f4f4f4;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .script-list {
+            width: 50%;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .script-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 5px; /* Adjust spacing between buttons */
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .delete-button {
+            background-color: #f44336;
+        }
+
+        .delete-button:hover {
+            background-color: #d32f2f;
+        }
+
+        .back-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <header>Manage Scripts</header>
+    <div class="container">
+        <div class="script-list" id="script-list"></div>
+        <button class="back-button" onclick="navigateToHome()">Back to Home</button>
+    </div>
+
+    <script>
+        function navigateToHome() {
+            window.location.href = '/';
+        }
+
+        function fetchScripts() {
+            fetch('/get_all_scripts')
+                .then(response => response.json())
+                .then(scripts => {
+                    const scriptListDiv = document.getElementById('script-list');
+                    scriptListDiv.innerHTML = '';
+
+                    if (scripts.length === 0) {
+                        scriptListDiv.innerHTML = '<p>No scripts found.</p>';
+                        return;
+                    }
+
+                    scripts.forEach(script => {
+                        const scriptItem = document.createElement('div');
+                        scriptItem.classList.add('script-item');
+
+                        const scriptName = document.createElement('span');
+                        scriptName.textContent = script;
+
+                        const buttonGroup = document.createElement('div');
+                        buttonGroup.classList.add('button-group');
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.classList.add('delete-button');
+                        deleteButton.onclick = () => {
+                            if (confirm(`Are you sure you want to delete the script "${script}"?`)) {
+                                fetch('/delete_script', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name: script })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        alert(`Script "${script}" deleted successfully.`);
+                                        scriptItem.remove();
+                                    } else {
+                                        alert(`Failed to delete script: ${data.error}`);
+                                    }
+                                })
+                                .catch(error => console.error('Error deleting script:', error));
+                            }
+                        };
+
+                        const editButton = document.createElement('button');
+                        editButton.innerHTML = '&#9998;'; // Pencil icon
+                        editButton.onclick = () => {
+                            const scriptNameWithoutExt = script.replace('.py', '');
+                            window.location.href = `/edit_script?name=${encodeURIComponent(scriptNameWithoutExt)}`;
+                        };
+
+                        buttonGroup.appendChild(deleteButton);
+                        buttonGroup.appendChild(editButton);
+
+                        scriptItem.appendChild(scriptName);
+                        scriptItem.appendChild(buttonGroup);
+                        scriptListDiv.appendChild(scriptItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching scripts:', error));
+        }
+
+        fetchScripts();
+    </script>
+</body>
+</html>
+

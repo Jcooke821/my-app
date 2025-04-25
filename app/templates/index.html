@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoTrace Testing</title>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <style>
+        #questionModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        #questionModal #modalContent {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        #questionModal button {
+            margin: 10px;
+            padding: 10px 20px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+        #names {
+            width: 13%;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+        #test-routines {
+            background-color: #f0f0f0;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        #name-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        #name-list div {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+            transition: background-color 0.3s;
+        }
+        #name-list div:hover {
+            background-color: #ddd;
+        }
+        #name-list div.selected {
+            background-color: #b3b3b3;
+            font-weight: bold;
+        }
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        #description {
+            position: relative;
+            padding: 5px 10px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 40px;
+            line-height: 30px;
+            margin: 10px;
+        }
+        #description p {
+            font-size: 16px;
+            margin: 0;
+        }
+        #tasks {
+            width: 35%;
+            background-color: #f9f9f9;
+            border-left: 1px solid #ddd;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        #tasks p {
+            margin: 0;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #tasks button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+        }
+        #tasks p:first-child {
+            font-weight: bold;
+        }
+        #log {
+            position: absolute;
+            top: 150px;
+            left: 35%;
+            right: 10px;
+            background-color: #e9e9e9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            height: 40px;
+            line-height: 30px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #info-box {
+            position: absolute;
+            top: 200px;
+            left: 35%;
+            right: 10px;
+            bottom: 50px;
+            background-color: #ffffff;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+        #clear-button {
+            position: absolute;
+            bottom: 10px;
+            left: 35%;
+            right: 10px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #clear-button:hover {
+            background-color: #ddd;
+        }
+        #manage-scripts-button {
+            position: absolute;
+            bottom: 110px;
+            left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 50px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #manage-scripts-button:hover {
+            background-color: #45a049;
+        }
+        #add-new-script-button {
+            position: absolute;
+            bottom: 60px;
+            left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 50px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #add-new-script-button:hover {
+            background-color: #45a049;
+        }
+        #create-routine-button {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 50px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #create-routine-button:hover {
+            background-color: #45a049;
+        }
+        #test-history-button {
+            position: absolute;
+            bottom: 160px;
+            left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 50px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #test-history-button:hover {
+            background-color: #45a049;
+        }
+        #edit-config-button {
+            position: absolute;
+            bottom: 210px;
+            left: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 50px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        #edit-config-button:hover {
+            background-color: #45a049;
+        }
+        .task-active {
+            background-color: #45a049;
+            font-weight: bold;
+        }
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-left: 10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+        .button-wide {
+            width: 227px;
+        }
+        /* New Pico Section Styles */
+        .pico-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        .pico-section h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .pico-section button {
+            margin: 5px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pico-section button:hover {
+            background-color: #45a049;
+        }
+        #device_status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #ffcccc;
+            color: #990000;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            z-index: 1100;
+        }
+        .pico-section.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="device_status"></div>
+    <div id="questionModal">
+        <div id="modalContent">
+            <p id="questionText"></p>
+            <button id="yesButton">Yes</button>
+            <button id="noButton">No</button>
+        </div>
+    </div>
+    <div id="uploadModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="margin: 15% auto; padding: 20px; width: 300px; text-align: center; background: #fff; border-radius: 5px;">
+          <p id="uploadMessage" style="font-size: 18px;">Uploading UF2 File...</p>
+        </div>
+    </div>
+    <div id="uploadTests" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="margin: 15% auto; padding: 20px; width: 300px; text-align: center; background: #fff; border-radius: 5px;">
+          <p id="uploadTestsMessage" style="font-size: 18px;">Uploading Test Software...</p>
+        </div>
+    </div>
+    <div id="uploadProduction" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="margin: 15% auto; padding: 20px; width: 300px; text-align: center; background: #fff; border-radius: 5px;">
+          <p id="uploadProductionMessage" style="font-size: 18px;">Uploading Production Software...</p>
+        </div>
+    </div>
+    <div id="resetBoard" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div style="margin: 15% auto; padding: 20px; width: 300px; text-align: center; background: #fff; border-radius: 5px;">
+          <p id="resetBoardMessage" style="font-size: 18px;">Resetting Board...</p>
+        </div>
+    </div>
+    <div id="names">
+        <div id="test-routines">Test Routines</div>
+        <div id="name-list"></div>
+    </div>
+    <div id="main-content">
+        <header>EchoTrace Testing</header>
+        <div id="description">
+            <p>Select a routine to view its description.</p>
+        </div>
+        <div id="tasks">
+            <p>Select a routine to view its tasks.</p>
+        </div>
+        <div id="log">Log</div>
+        <div id="info-box">Live Messages</div>
+        <div id="clear-button" onclick="clearMessages()">Clear</div>
+    </div>
+    <button class="button-wide" id="edit-config-button" onclick="navigateToEditConfig()">Edit Config</button>
+    <button class="button-wide" id="test-history-button" onclick="navigateToViewTestHistory()">Test History</button>
+    <button class="button-wide" id="manage-scripts-button" onclick="navigateToManageScripts()">Manage Scripts</button>
+    <button class="button-wide" id="add-new-script-button" onclick="navigateToAddScript()">Add New Script</button>
+    <button class="button-wide" id="create-routine-button" onclick="navigateToCreateRoutine()">Create Routine</button>
+
+    <!-- New Pico Initialization & Software Upload Section -->
+    <div class="pico-section">
+        <h2>Pico Initialization & Software Upload</h2>
+        <!-- These operations will be triggered automatically for UF2 flashing,
+             and manually via the buttons below for test/production uploads and reset -->
+        <button id="upload-test">Upload Test Software</button>
+        <button id="upload-production">Upload Production Software</button>
+        <button id="reset-board">Reset Board</button>
+    </div>
+
+    <script>
+        let isEditingRoutine = false;
+        const socket = io();
+        let isRunning = false; // Track if a routine or test is running
+
+        socket.on('connect', () => {
+            console.log('Connected to Socket.IO server');
+        });
+
+        function fetchAndDisplayRoutines() {
+            fetch('/get_routines')
+                .then(response => response.json())
+                .then(data => {
+                    const nameListDiv = document.getElementById('name-list');
+                    const descriptionDiv = document.getElementById('description');
+                    const tasksDiv = document.getElementById('tasks');
+                    nameListDiv.innerHTML = ''; // Clear any existing routines
+
+                    data.forEach(routine => {
+                        const nameElement = document.createElement('div');
+                        nameElement.style.display = "flex";
+                        nameElement.style.alignItems = "center";
+                        nameElement.style.justifyContent = "space-between";
+                        nameElement.style.padding = "10px";
+                        nameElement.style.borderBottom = "1px solid #ddd";
+
+                        // Routine name (span and input field)
+                        const nameText = document.createElement('span');
+                        nameText.textContent = routine.Name;
+                        nameText.style.cursor = "pointer";
+
+                        const nameInput = document.createElement('input');
+                        nameInput.type = 'text';
+                        nameInput.value = routine.Name;
+                        nameInput.style.display = 'none'; // Initially hidden
+                        nameInput.style.flexGrow = '1';
+                        nameInput.style.marginRight = '5px';
+
+                        nameElement.appendChild(nameText);
+                        nameElement.appendChild(nameInput);
+
+                        // Edit button (pencil icon)
+                        const editButton = document.createElement('button');
+                        editButton.innerHTML = '&#9998;'; // Unicode for pencil icon
+                        editButton.style.marginLeft = '10px';
+
+                        editButton.onclick = (event) => {
+                            event.stopPropagation(); // Prevent selecting the routine when editing
+
+                            if (isEditingRoutine) {
+                                alert('Finish editing the current routine before editing another.');
+                                return;
+                            }
+
+                            isEditingRoutine = true;
+                            nameText.style.display = 'none';
+                            nameInput.style.display = 'inline-block';
+                            nameInput.focus();
+                            editButton.style.display = 'none';
+                            saveButton.style.display = 'inline-block';
+                        };
+
+                        // Save button (tick icon)
+                        const saveButton = document.createElement('button');
+                        saveButton.innerHTML = '&#10004;'; // Unicode for checkmark
+                        saveButton.style.marginLeft = '10px';
+                        saveButton.style.display = 'none'; // Initially hidden
+
+                        saveButton.onclick = (event) => {
+                            event.stopPropagation(); // Prevent routine selection while saving
+
+                            const newName = nameInput.value.trim();
+                            if (!newName) {
+                                alert("Routine name cannot be empty.");
+                                return;
+                            }
+
+                            fetch('/rename_routine', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ old_name: routine.Name, new_name: newName })
+                            })
+                            .then(response => response.json())
+                            .then(result => {
+                                if (result.success) {
+                                    alert(`Routine renamed to "${newName}".`);
+                                    routine.Name = newName;
+                                    nameText.textContent = newName;
+                                    nameText.style.display = 'inline-block';
+                                    nameInput.style.display = 'none';
+                                    editButton.style.display = 'inline-block';
+                                    saveButton.style.display = 'none';
+                                    isEditingRoutine = false; // Allow editing another routine
+                                } else {
+                                    alert(`Failed to rename routine: ${result.error}`);
+                                }
+                            })
+                            .catch(error => console.error('Error renaming routine:', error));
+                        };
+
+                        nameElement.appendChild(editButton);
+                        nameElement.appendChild(saveButton);
+
+                        // Delete button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.style.marginLeft = '10px';
+                        deleteButton.style.backgroundColor = '#f44336';
+                        deleteButton.style.color = 'white';
+                        deleteButton.style.border = 'none';
+                        deleteButton.style.padding = '5px 10px';
+                        deleteButton.style.borderRadius = '4px';
+                        deleteButton.style.cursor = 'pointer';
+
+                        deleteButton.onclick = (event) => {
+                            event.stopPropagation(); // Prevent selecting while deleting
+
+                            if (confirm(`Are you sure you want to delete the routine "${routine.Name}"?`)) {
+                                fetch('/delete_routine', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ routine_name: routine.Name })
+                                })
+                                .then(response => response.json())
+                                .then(result => {
+                                    if (result.success) {
+                                        alert(`Routine "${routine.Name}" deleted successfully.`);
+                                        nameElement.remove(); // Remove the deleted routine from the list
+                                    } else {
+                                        alert(`Failed to delete routine: ${result.error}`);
+                                    }
+                                })
+                                .catch(error => console.error('Error deleting routine:', error));
+                            }
+                        };
+
+                        nameElement.appendChild(deleteButton);
+
+                        // Add click event to select routine
+                        nameElement.addEventListener('click', () => {
+                            if (isEditingRoutine) return; // Prevent selection when editing
+
+                            document.querySelectorAll('#name-list div').forEach(el => el.classList.remove('selected'));
+                            nameElement.classList.add('selected');
+
+                            descriptionDiv.innerHTML = `<p>${routine.Description}</p>`;
+                            tasksDiv.innerHTML = '';
+
+                            const scriptsElement = document.createElement('p');
+                            scriptsElement.textContent = 'Scripts';
+
+                            const scriptsButton = document.createElement('button');
+                            scriptsButton.innerHTML = '&#9654;';
+                            scriptsButton.addEventListener('click', () => {
+                                if (!isRunning) {
+                                    playRoutine(routine.Tasks);
+                                } else {
+                                    alert('A test is already running. Please wait until it finishes.');
+                                }
+                            });
+
+                            scriptsElement.appendChild(scriptsButton);
+                            tasksDiv.appendChild(scriptsElement);
+
+                            if (routine.Tasks && routine.Tasks.length > 0) {
+                                routine.Tasks.forEach(task => {
+                                    const taskElement = document.createElement('p');
+                                    taskElement.textContent = task.Name;
+
+                                    // Edit Button (Pencil Icon)
+                                    const editButton = document.createElement('button');
+                                    editButton.innerHTML = '&#9998;'; // Unicode for pencil icon
+                                    editButton.style.marginLeft = '10px';
+                                    editButton.addEventListener('click', () => {
+                                        window.location.href = `/edit_script?name=${encodeURIComponent(task.Name)}`;
+                                    });
+
+                                    const playButton = document.createElement('button');
+                                    playButton.innerHTML = '&#9654;';
+                                    playButton.addEventListener('click', () => {
+                                        if (!isRunning) {
+                                            playRoutine([task]);
+                                        } else {
+                                            alert('A test is already running. Please wait until it finishes.');
+                                        }
+                                    });
+
+                                    taskElement.appendChild(playButton);
+                                    taskElement.appendChild(editButton);
+                                    tasksDiv.appendChild(taskElement);
+                                });
+                            } else {
+                                const noTasksElement = document.createElement('p');
+                                noTasksElement.textContent = 'No tasks available for this routine.';
+                                tasksDiv.appendChild(noTasksElement);
+                            }
+                        });
+
+                        nameListDiv.appendChild(nameElement);
+                    });
+                })
+                .catch(error => console.error('Error fetching routines:', error));
+        }
+
+        // Function to enable editing of routine names
+        function enableRoutineEdit(nameElement, oldName) {
+            const inputField = document.createElement('input');
+            inputField.type = 'text';
+            inputField.value = oldName;
+            inputField.style.marginRight = '10px';
+
+            const saveButton = document.createElement('button');
+            saveButton.innerHTML = '&#10004;'; // Checkmark icon
+            saveButton.style.border = 'none';
+            saveButton.style.background = 'none';
+            saveButton.style.cursor = 'pointer';
+
+            saveButton.onclick = () => {
+                const newName = inputField.value.trim();
+                if (!newName) {
+                    alert("Routine name cannot be empty.");
+                    return;
+                }
+
+                fetch(`/check_routine_exists?name=${encodeURIComponent(newName)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.exists && newName !== oldName) {
+                            alert("Routine name already in use.");
+                        } else {
+                            fetch('/rename_routine', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ old_name: oldName, new_name: newName })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert("Routine renamed successfully.");
+                                    fetchAndDisplayRoutines();
+                                } else {
+                                    alert(`Error renaming routine: ${data.error}`);
+                                }
+                            })
+                            .catch(error => console.error('Error renaming routine:', error));
+                        }
+                    })
+                    .catch(error => console.error('Error checking routine existence:', error));
+            };
+
+            nameElement.innerHTML = '';
+            nameElement.appendChild(inputField);
+            nameElement.appendChild(saveButton);
+        }
+
+        function playRoutine(tasks) {
+            const infoBox = document.getElementById('info-box');
+            infoBox.innerHTML = '';
+            console.log(`Starting tasks: ${tasks.map(task => task.Name).join(', ')}`);
+
+            // Remove any existing spinners
+            document.querySelectorAll('.spinner').forEach(el => el.remove());
+
+            // Remove active highlight from previous tasks
+            document.querySelectorAll('.task-active').forEach(el => el.classList.remove('task-active'));
+
+            // Highlight the tasks being executed and add spinners
+            tasks.forEach(task => {
+                const taskElements = Array.from(document.querySelectorAll('#tasks p')).filter(el => el.textContent.includes(task.Name));
+                taskElements.forEach(el => {
+                    el.classList.add('task-active'); // Highlight the task
+
+                    // Add a spinner
+                    const spinner = document.createElement('div');
+                    spinner.className = 'spinner';
+                    el.appendChild(spinner);
+                });
+            });
+            isRunning = true;
+            socket.emit('run_test', { tasks });
+        }
+
+        socket.on('live_message', message => {
+            const infoBox = document.getElementById('info-box');
+            const messageElement = document.createElement('p');
+            if (message.toLowerCase().includes('error')) {
+                messageElement.classList.add('error-message');
+            }
+            messageElement.textContent = message;
+            infoBox.appendChild(messageElement);
+        });
+
+        socket.on('test_complete', () => {
+            isRunning = false;
+            console.log('All tests have finished.');
+            document.querySelectorAll('.spinner').forEach(el => el.remove()); // Remove spinners
+            document.querySelectorAll('.task-active').forEach(el => el.classList.remove('task-active'));
+        });
+
+        function clearMessages() {
+            const infoBox = document.getElementById('info-box');
+            infoBox.innerHTML = '';
+        }
+
+        function navigateToCreateRoutine() {
+            window.location.href = '/create_routine';
+        }
+
+        function navigateToAddScript() {
+            window.location.href = '/add_script';
+        }
+
+        function navigateToManageScripts() {
+            window.location.href = '/manage_scripts';
+        }
+
+        function navigateToViewTestHistory() {
+            window.location.href = '/test_history';
+        }
+
+        function navigateToEditConfig() {
+            fetch("/get_all_configs")
+            .then(response => response.json())
+            .then(files => {
+                if (files.length !== 1) {
+                alert("Expected exactly one config file but found " + files.length);
+                return;
+                }
+                const configFileName = files[0];
+                window.location.href = "/EditConfig.html?name=" + encodeURIComponent(configFileName);
+            })
+            .catch(error => {
+                console.error("Error fetching config file name:", error);
+                alert("Error fetching config file name.");
+            });
+        }
+
+        // Initial fetch of routines
+        fetchAndDisplayRoutines();
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var socket = io();
+
+            var modal = document.getElementById("questionModal");
+            var questionText = document.getElementById("questionText");
+            var yesButton = document.getElementById("yesButton");
+            var noButton = document.getElementById("noButton");
+
+            // Show the modal with the question
+            socket.on('ask_question', function(data) {
+                questionText.textContent = data.question;
+                modal.style.display = "block";
+            });
+
+            // Close the modal when receiving the close event
+            socket.on('close_question', function(data) {
+                modal.style.display = "none";
+            });
+
+            // Send response when Yes or No buttons are clicked
+            yesButton.addEventListener("click", function() {
+                socket.emit('question_response', {response: 'yes'});
+                modal.style.display = "none";
+            });
+
+            noButton.addEventListener("click", function() {
+                socket.emit('question_response', {response: 'no'});
+                modal.style.display = "none";
+            });
+        });
+
+        let uf2Flashed = false;
+        window.deviceDetectedPopUpShown = false;
+        window.uf2UploadStarted = false;  // Flag to prevent duplicate uploads
+
+        async function checkPicoStatus() {
+            try {
+                let response = await fetch("/pico_status");
+                let status = await response.json();
+                console.log("Pico status:", status); // Debug log
+
+                // Get DOM elements.
+                const deviceStatusDiv = document.getElementById("device_status");
+                const picoSection = document.querySelector(".pico-section");
+
+                if (status.pico_present) {
+                // Clear status text.
+                if (deviceStatusDiv) {
+                    deviceStatusDiv.textContent = "";
+                }
+                // Remove the disabled state.
+                if (picoSection) {
+                    picoSection.classList.remove("disabled");
+                }
+                
+                if (!status.bootloader) {
+                    // Pico is connected normally (via serial).
+                    // Assume it has UF2 and show the detection message.
+                    if (!window.deviceDetectedPopUpShown) {
+                    window.deviceDetectedPopUpShown = true;
+                    alert("Device detected with UF2");
+                    }
+                } else {
+                    // Pico is in bootloader mode.
+                    if (!status.flashed) {
+                    // Trigger UF2 upload if it hasn't been started yet.
+                    if (!window.uf2UploadStarted) {
+                        window.uf2UploadStarted = true;
+                        const uploadModal = document.getElementById("uploadModal");
+                        if (uploadModal) {
+                        uploadModal.style.display = "block";
+                        }
+                        fetch("/upload_uf2", { method: "POST" })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (uploadModal) {
+                            uploadModal.style.display = "none";
+                            }
+                            if (result.success) {
+                            console.log("UF2 uploaded successfully");
+                            alert("UF2 uploaded successfully");
+                            } else {
+                            console.error("UF2 upload error: " + result.error);
+                            window.uf2UploadStarted = false;
+                            }
+                        })
+                        .catch(err => {
+                            if (uploadModal) {
+                            uploadModal.style.display = "none";
+                            }
+                            console.error("Error uploading UF2: " + err);
+                            window.uf2UploadStarted = false;
+                        });
+                    }
+                    }
+                }
+                } else {
+                // No Pico detected.
+                if (deviceStatusDiv) {
+                    deviceStatusDiv.textContent = "No device detected";
+                }
+                // Grey out the section and prevent interaction.
+                if (picoSection) {
+                    picoSection.classList.add("disabled");
+                }
+                window.deviceDetectedPopUpShown = false;
+                window.uf2UploadStarted = false;
+                }
+            } catch (err) {
+                console.error("Error checking Pico status:", err);
+            }
+        }
+
+        // Poll every 1 second (1000 ms)
+        setInterval(checkPicoStatus, 1000);
+
+        // Button: Upload Test Software.
+        document.getElementById("upload-test").addEventListener("click", async () => {
+        const uploadTestsDiv = document.getElementById("uploadTests");
+        if (uploadTestsDiv) {
+            uploadTestsDiv.style.display = "block";
+        }
+        try {
+            let response = await fetch("/upload_test", { method: "POST" });
+            let result = await response.json();
+            if (uploadTestsDiv) {
+            uploadTestsDiv.style.display = "none";
+            }
+            alert(result.success
+            ? "Test software uploaded successfully!"
+            : "Test upload error: " + result.error);
+        } catch (err) {
+            if (uploadTestsDiv) {
+            uploadTestsDiv.style.display = "none";
+            }
+            alert("Test upload error: " + err);
+        }
+        });
+
+        // Button: Upload Production Software.
+        document.getElementById("upload-production").addEventListener("click", async () => {
+        const uploadProductionDiv = document.getElementById("uploadProduction");
+        if (uploadProductionDiv) {
+            uploadProductionDiv.style.display = "block";
+        }
+        try {
+            let response = await fetch("/upload_production", { method: "POST" });
+            let result = await response.json();
+            if (uploadProductionDiv) {
+            uploadProductionDiv.style.display = "none";
+            }
+            alert(result.success
+            ? "Production software uploaded successfully!"
+            : "Production upload error: " + result.error);
+        } catch (err) {
+            if (uploadProductionDiv) {
+            uploadProductionDiv.style.display = "none";
+            }
+            alert("Production upload error: " + err);
+        }
+        });
+
+        // Button: Reset Board.
+        document.getElementById("reset-board").addEventListener("click", async () => {
+        const resetBoardDiv = document.getElementById("resetBoard");
+        if (resetBoardDiv) {
+            resetBoardDiv.style.display = "block";
+        }
+        try {
+            let response = await fetch("/reset_board", { method: "POST" });
+            let result = await response.json();
+            if (resetBoardDiv) {
+            resetBoardDiv.style.display = "none";
+            }
+            alert(result.success
+            ? "Board reset successfully!"
+            : "Board reset error: " + result.error);
+        } catch (err) {
+            if (resetBoardDiv) {
+            resetBoardDiv.style.display = "none";
+            }
+            alert("Board reset error: " + err);
+        }
+        });
+    </script>
+</body>
+</html>

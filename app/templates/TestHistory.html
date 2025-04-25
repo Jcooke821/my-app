@@ -1,0 +1,110 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test History</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        header {
+            background-color: #f4f4f4;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .back-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .back-button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <header>Test History</header>
+    
+    <div class="container">
+        <button class="back-button" onclick="navigateToHome()">Back to Home</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Result Log</th>
+                    <th>QR Code</th>
+                </tr>
+            </thead>
+            <tbody id="logContainer">
+                <!-- Logs will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function navigateToHome() {
+            window.location.href = '/';
+        }
+
+        function fetchLogs() {
+            fetch('/get_logs')
+                .then(response => response.json())
+                .then(data => {
+                    let logContainer = document.getElementById('logContainer');
+                    logContainer.innerHTML = data.map(log => `
+                        <tr>
+                            <td>${log[0]}</td>
+                            <td>${log[1]}</td>
+                            <td>${log[2]}</td>
+                            <td>${log[3].replace(/\n/g, "<br>")}</td>
+                            <td>${log[4] ? log[4] : ''}</td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(error => console.error('Error fetching logs:', error));
+        }
+        
+        fetchLogs();
+    </script>
+</body>
+</html>

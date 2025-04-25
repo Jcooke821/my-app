@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Script</title>
+    
+    <!-- CodeMirror Styles & Scripts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/lint/python-lint.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        label {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        #editor-container {
+            width: 90%;
+            height: 714px;
+            border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 60px;
+        }
+
+        #editor {
+            flex: 1;
+            height: 50%;
+            overflow: auto;
+        }
+
+        #log-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #log-header {
+            background-color: #e9e9e9;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #log-output {
+            flex: 1;
+            max-height: 50%; /* Ensure it does not overflow */
+            background-color: #f9f9f9;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+            overflow-y: auto; /* Ensure scrolling */
+            font-family: monospace;
+            white-space: pre-wrap; /* Ensures line breaks appear */
+        }
+
+
+        .CodeMirror {
+            height: 100% !important;
+            width: 100% !important;
+            font-size: 18px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: flex-end;
+            width: 90%;
+            position: absolute;
+            bottom: 20px;
+            right: 6%;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 180px;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #run-button {
+            background: none;
+            color: black;
+            font-size: 24px;
+            padding: 5px;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+            position: absolute;
+            right: -4.5%;
+            top: -780px; /* Adjust based on positioning */
+        }
+        
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>Add Script</header>
+    <div class="container">
+        <label for="script-name">Script Name:</label>
+        <input type="text" id="script-name" placeholder="Enter script name (without .py)">
+
+        <label style="display: block; text-align: left; width: 90%;">Python Code:</label>
+        <div id="editor-container">
+            <div id="editor"></div>
+            <div id="log-container">
+                <div id="log-header">Log</div>
+                <div id="log-output"></div>
+            </div>            
+        </div>
+
+        <div class="button-container">
+            <button onclick="saveScript()">Save Script</button>
+            <button id="run-button" onclick="runScript()">&#9654;</button>
+            <button onclick="navigateToManageScripts()">Manage Scripts</button>
+            <button onclick="navigateToHome()">Back to Home</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io({
+            reconnection: true, // Enable auto-reconnect
+            reconnectionAttempts: 10, // Try reconnecting 10 times
+            reconnectionDelay: 1000, // Wait 1 second before retrying
+        });
+
+        function navigateToManageScripts() {
+            window.location.href = '/manage_scripts';
+        }
+        
+        function navigateToHome() {
+            window.location.href = '/';
+        }
+
+        var editor = CodeMirror(document.getElementById("editor"), {
+            mode: "python",
+            lineNumbers: true,
+            matchBrackets: true,
+            lint: true,
+            theme: "default"
+        });
+
+        function saveScript(callback = null) {
+            const scriptName = document.getElementById("script-name").value.trim();
+            const scriptContent = editor.getValue();
+
+            if (!scriptName) {
+                alert("Please enter a script name.");
+                return;
+            }
+
+            fetch(`/check_script_exists?name=${encodeURIComponent(scriptName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        alert(`Script "${scriptName}" already exists. Please go to "Manage Scripts" to edit it.`);
+                    } else {
+                        fetch('/save_script', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: scriptName, content: scriptContent })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("Script saved successfully!");
+                                if (callback) callback(scriptName);
+                            } else {
+                                alert(`Error saving script: ${data.error}`);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                    }
+                })
+                .catch(error => console.error('Error checking script existence:', error));
+        }
+
+        function runScript() {
+            saveScript((scriptName) => {
+                document.getElementById("log-output").innerHTML = "";
+
+                socket.emit('run_test', { tasks: [{ Name: scriptName, Path: `TestScripts/${scriptName}.py`, StopOnFailure: "False" }] });
+            });
+        }
+
+        socket.on('live_message', message => {
+            const logOutput = document.getElementById("log-output");
+            const messageElement = document.createElement("p");
+            messageElement.textContent = message;
+            messageElement.style.margin = "5px 0";
+
+            if (message.toLowerCase().includes('error')) {
+                messageElement.classList.add('error-message');
+            }
+
+            logOutput.appendChild(messageElement);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        });
+
+        socket.on('test_complete', () => {
+            console.log("Test completed.");
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Config</title>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    header {
+      background-color: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    label {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+      margin-bottom: 5px;
+      width: 90%;
+      text-align: left;
+    }
+    
+    input, textarea {
+      width: 90%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+    
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    
+    .button-container {
+      display: flex;
+      gap: 10px;
+      width: 90%;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none; 
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+    
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+      text-align: center;
+      position: relative;
+    }
+    
+    #modal-image-container {
+      position: relative;
+      width: 100%;
+    }
+    
+    #modal-image {
+      display: block;
+      width: 100%;
+    }
+    
+    #overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    
+    #modal-instructions {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>Edit Config</header>
+  <div class="container">
+    <label for="config-name">Config Name:</label>
+    <input type="text" id="config-name">
+
+    <div id="config-fields"></div>
+
+    <div class="button-container">
+      <button onclick="saveConfig()">Save Config</button>
+      <button onclick="navigateToHome()">Back to Home</button>
+    </div>
+  </div>
+  
+  <!-- Modal for LED Coordinate Selection -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <div id="modal-image-container">
+        <img id="modal-image" src="" alt="LED Image">
+        <canvas id="overlay-canvas"></canvas>
+      </div>
+      <p id="modal-instructions">Click on the 4 corners of LED <span id="led-index"></span></p>
+      <button onclick="cancelEdit()">Cancel</button>
+    </div>
+  </div>
+  
+  <script>
+    let configName = new URLSearchParams(window.location.search).get("name") || "";
+    document.getElementById("config-name").value = configName;
+    
+    fetch(`/get_config?name=${encodeURIComponent(configName)}`)
+      .then(response => response.json())
+      .then(data => {
+        const configFieldsDiv = document.getElementById("config-fields");
+        configFieldsDiv.innerHTML = "";
+        for (const key in data) {
+          if (key.toLowerCase() === "name") continue;
+          if (key === "led_coordinates") {
+            const container = document.createElement("div");
+            container.style.marginBottom = "15px";
+            
+            const label = document.createElement("label");
+            label.textContent = "LED Coordinates";
+            container.appendChild(label);
+            
+            const ledContainer = document.createElement("div");
+            ledContainer.id = "led-coordinates-container";
+            data[key].forEach((coords, index) => {
+              const coordDiv = document.createElement("div");
+              coordDiv.style.marginBottom = "10px";
+              const editButton = document.createElement("button");
+              editButton.textContent = `Edit LED ${index + 1}`;
+              editButton.onclick = () => { editLedCoordinate(index); };
+              const coordDisplay = document.createElement("span");
+              coordDisplay.id = `led-coord-${index}`;
+              coordDisplay.style.marginLeft = "10px";
+              coordDisplay.textContent = JSON.stringify(coords);
+              coordDiv.appendChild(editButton);
+              coordDiv.appendChild(coordDisplay);
+              ledContainer.appendChild(coordDiv);
+            });
+            container.appendChild(ledContainer);
+            configFieldsDiv.appendChild(container);
+          } else {
+            const fieldContainer = document.createElement("div");
+            fieldContainer.style.marginBottom = "15px";
+            
+            const label = document.createElement("label");
+            label.textContent = key;
+            label.htmlFor = key;
+            fieldContainer.appendChild(label);
+            
+            let inputElement;
+            if (typeof data[key] === "object") {
+              inputElement = document.createElement("textarea");
+              inputElement.value = JSON.stringify(data[key], null, 2);
+            } else {
+              inputElement = document.createElement("input");
+              inputElement.type = "text";
+              inputElement.value = data[key];
+            }
+            inputElement.id = key;
+            fieldContainer.appendChild(inputElement);
+            configFieldsDiv.appendChild(fieldContainer);
+          }
+        }
+      })
+      .catch(error => console.error("Error fetching config:", error));
+    
+    function navigateToHome() {
+      window.location.href = '/';
+    }
+    
+    function saveConfig() {
+      let oldName = configName;
+      let newName = document.getElementById("config-name").value.trim();
+      if (!newName) {
+        alert("Please enter a config name.");
+        return;
+      }
+      
+      const configFieldsDiv = document.getElementById("config-fields");
+      const inputs = configFieldsDiv.querySelectorAll("input, textarea");
+      let configData = {};
+      inputs.forEach(input => {
+        let value = input.value;
+        try {
+          value = JSON.parse(value);
+        } catch (e) {}
+        configData[input.id] = value;
+      });
+      
+      const ledCoords = [];
+      const ledContainer = document.getElementById("led-coordinates-container");
+      if (ledContainer) {
+        for (let i = 0; i < ledContainer.children.length; i++) {
+          const span = ledContainer.children[i].querySelector("span");
+          try {
+            ledCoords.push(JSON.parse(span.textContent));
+          } catch (e) {
+            ledCoords.push(span.textContent);
+          }
+        }
+      }
+      configData["led_coordinates"] = ledCoords;
+      
+      fetch("/save_config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          old_name: oldName,
+          new_name: newName,
+          data: configData
+        })
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          alert("Config saved successfully!");
+          configName = newName;
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("name", newName);
+          window.history.replaceState(null, "", newUrl);
+        } else {
+          alert("Error saving config: " + result.error);
+        }
+      })
+      .catch(error => {
+        console.error("Error saving config:", error);
+        alert("Error saving config.");
+      });
+    }
+    
+    // Helper function to order four points into top-left, top-right, bottom-right, bottom-left.
+    function orderPoints(points) {
+      // points is an array of four [x, y] pairs.
+      // Compute the sum (x+y) for each point.
+      let sums = points.map(pt => pt[0] + pt[1]);
+      // The top-left point has the smallest sum.
+      let topLeft = points[sums.indexOf(Math.min(...sums))];
+      // The bottom-right point has the largest sum.
+      let bottomRight = points[sums.indexOf(Math.max(...sums))];
+      
+      // Compute the difference (x-y) for each point.
+      let diffs = points.map(pt => pt[0] - pt[1]);
+      // The top-right has the smallest difference.
+      let topRight = points[diffs.indexOf(Math.min(...diffs))];
+      // The bottom-left has the largest difference.
+      let bottomLeft = points[diffs.indexOf(Math.max(...diffs))];
+      
+      return [topLeft, topRight, bottomRight, bottomLeft];
+    }
+    
+    let currentLedIndex = null;
+    let clickPoints = [];
+    let canvas, ctx;
+    
+    function editLedCoordinate(index) {
+      currentLedIndex = index;
+      clickPoints = [];
+      document.getElementById("led-index").textContent = index + 1;
+      
+      const modal = document.getElementById("modal");
+      modal.style.display = "block";
+      const modalImage = document.getElementById("modal-image");
+      // Use the downscaled image endpoint with query parameter.
+      modalImage.src = `/capture_led_image?downscaled=true&dummy=${new Date().getTime()}`;
+      
+      modalImage.onload = function() {
+        const container = document.getElementById("modal-image-container");
+        canvas = document.getElementById("overlay-canvas");
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      };
+    }
+    
+    document.getElementById("modal-image").addEventListener("click", function(e) {
+      const rect = this.getBoundingClientRect();
+      const displayedWidth = rect.width;
+      const displayedHeight = rect.height;
+      const naturalWidth = this.naturalWidth;
+      const naturalHeight = this.naturalHeight;
+      
+      const scaleX = naturalWidth / displayedWidth;
+      const scaleY = naturalHeight / displayedHeight;
+      
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      clickPoints.push([Math.round(x), Math.round(y)]);
+      
+      // Draw a red circle with radius 2.5 on displayed coordinates.
+      if (ctx) {
+        ctx.beginPath();
+        ctx.arc(e.clientX - rect.left, e.clientY - rect.top, 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = "red";
+        ctx.fill();
+      }
+      
+      if (clickPoints.length === 4) {
+        // Order the points so that they're always in the order:
+        // Top Left, Top Right, Bottom Right, Bottom Left.
+        const orderedPoints = orderPoints(clickPoints);
+        setTimeout(() => {
+          const span = document.getElementById(`led-coord-${currentLedIndex}`);
+          span.textContent = JSON.stringify(orderedPoints);
+          document.getElementById("modal").style.display = "none";
+          clickPoints = [];
+        }, 1000);
+      }
+    });
+    
+    function cancelEdit() {
+      document.getElementById("modal").style.display = "none";
+      clickPoints = [];
+    }
+  </script>
+</body>
+</html>
