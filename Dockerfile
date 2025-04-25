@@ -1,7 +1,23 @@
-# 1. Base image: multi-arch Python 3.9 on Debian Bullseye
 FROM python:3.9-slim-bullseye
+ 
+# install wget, gnupg and certificates so we can add the Pi OS repo
 
-# 2. Install OS packages needed for Pi camera and media
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      wget \
+      gnupg \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# add the Raspberry Pi OS repository & key
+
+RUN wget -O - https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
+      | apt-key add - \
+&& echo "deb http://archive.raspberrypi.org/debian bullseye main" \
+      > /etc/apt/sources.list.d/raspi.list
+
+# now install camera apps, ffmpeg, build tools
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       libcamera-apps \
@@ -9,23 +25,12 @@ RUN apt-get update && \
       build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Set working dir inside the container
+# → the rest stays the same…
+
 WORKDIR /usr/src/app
-
-# 4. Copy only requirements first (leverages Docker layer cache)
 COPY requirements.txt ./
-
-# 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# 6. Copy your entire app source code
 COPY . .
-
-# 7. Expose the port your Flask app listens on
 EXPOSE 5000
-
-# 8. Don’t buffer Python stdout/stderr (helps with real-time logs)
 ENV PYTHONUNBUFFERED=1
-
-# 9. Command to run your app
 CMD ["python", "run.py"]
