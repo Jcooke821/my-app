@@ -1,7 +1,7 @@
 # 1. Base image: multi-arch Python 3.9 on Debian Bullseye
 FROM python:3.9-slim-bullseye
 
-# 2. Install Pi-OS repo tooling, add Pi-OS repo, then install camera, media, build deps, CUPS, DBus etc.
+# 2. Install Pi-OS repo tooling, add Pi-OS repo, then install camera, media, build deps, CUPS, DBus, GLib, etc.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       wget \
@@ -16,6 +16,7 @@ RUN apt-get update && \
       build-essential \
       pkg-config \
       libdbus-1-dev \
+      libglib2.0-dev \
       python3-dev \
       python3-cups && \
     rm -rf /var/lib/apt/lists/*
