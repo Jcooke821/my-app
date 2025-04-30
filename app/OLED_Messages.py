@@ -38,6 +38,3 @@ def oled_display_message(message, font_size):
             y += extra_gap
     device.display(image)
 
-
-
-
