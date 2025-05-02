@@ -1,31 +1,18 @@
-# Byte-compiled Python files
+# .dockerignore
+
 __pycache__/
-*.py[cod]
+*.pyc
 
-# Virtual environments
 venv/
-env/
-.venv/
 
-# Git repo data
 .git/
-.gitignore      # (optional; the container doesn’t need it)
+.gitignore
 
-# Editor configs
 .vscode/
 .idea/
 
-# OS-specific
-.DS_Store
+QRImages/
 
-# Logs and databases
-*.log
-*.sqlite3
+Dockerfile
+.dockerignore
 
-# Build outputs
-build/
-dist/
-*.egg-info/
-
-# Node modules (if you happen to have a frontend build step)
-node_modules/
