@@ -30,5 +30,14 @@ if __name__ == '__main__':
         for file in files:
             extra_files.append(os.path.join(root, file))
 
-    socketio.run(app, debug=True, use_reloader=False, extra_files=[f for f in extra_files if "TestScripts" not in f])
+    # Read environment variable to allow running unsafe Werkzeug under systemd
+    allow_werk = os.getenv("ALLOW_UNSAFE_WERKZEUG", "0") == "1"
+
+    socketio.run(
+        app,
+        debug=True,
+        use_reloader=False,
+        allow_unsafe_werkzeug=allow_werk,
+        extra_files=[f for f in extra_files if "TestScripts" not in f]
+    )
 
