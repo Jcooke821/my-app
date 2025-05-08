@@ -524,7 +524,7 @@ def register_routes(app):
         # Launch the command in the background.
         p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            outs, errs = p.communicate(timeout=5)  # Increased timeout from 3 to 5 seconds
+            outs, errs = p.communicate(timeout=5)  # Timeout of 5 seconds
         except subprocess.TimeoutExpired:
             return jsonify(success=True)
         if p.returncode != 0:
